@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reto 01 – Verificación de Identidad Digital</title>
+  <meta name="description"
+    content="Portal de verificación de identidad digital con validación de documento y biometría facial mediante Truora." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">T</div>
+        <span class="logo-text">Reto 01<span class="logo-accent">Identity</span></span>
+      </div>
+      <nav class="nav-pills">
+        <span class="pill pill--active">Verificación</span>
+        <span class="pill" id="nav-events">Eventos</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <!-- ──── SECCIÓN: Configuración ──── -->
+    <section class="card config-card" id="section-config">
+      <div class="card-header">
+        <div class="step-badge">1</div>
+        <div>
+          <h2 class="card-title">Configurar Process Link</h2>
+          <p class="card-subtitle">Ingresa el token de integración generado desde la API de Truora</p>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="input-wrapper">
+          <label class="input-label" for="token-input">Web Integration Token (api_key)</label>
+          <div class="input-group">
+            <span class="input-icon">🔑</span>
+            <input type="text" id="token-input" class="token-input"
+              placeholder="Pega aquí tu token  (ej: eyJhbGciOiJSUzI1...)" autocomplete="off" spellcheck="false" />
+            <button class="btn-clear" id="btn-clear-token" title="Limpiar">✕</button>
+          </div>
+        </div>
+        <button class="btn btn--primary" id="btn-launch">
+          <span class="btn-icon">▶</span>
+          Iniciar Verificación
+        </button>
+      </div>
+
+      <div class="info-banner">
+        <span class="info-icon">ℹ️</span>
+        <p>
+          El token se obtiene desde la API de Truora. Recuerda que cada token tiene una
+          vigencia de <strong>2 horas</strong> y es de un solo uso por sesión.
+          <a href="https://dev.truora.com/digital-identity/create_process_link/" target="_blank" rel="noopener"
+            class="link">Ver documentación →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ──── SECCIÓN: iframe ──── -->
+    <section class="card iframe-card" id="section-iframe" hidden>
+      <div class="card-header">
+        <div class="step-badge">2</div>
+        <div>
+          <h2 class="card-title">Flujo de Verificación</h2>
+          <p class="card-subtitle" id="iframe-subtitle">Validación de documento e identidad biométrica</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="btn-back">← Cambiar token</button>
+      </div>
+
+      <div class="iframe-wrapper">
+        <div class="iframe-overlay" id="iframe-overlay">
+          <div class="spinner"></div>
+          <p class="loading-text">Cargando flujo de verificación…</p>
+        </div>
+        <iframe id="truora-iframe" src="" allow="camera; microphone" width="100%" height="700" frameborder="0"
+          title="Truora – Verificación de Identidad"></iframe>
+      </div>
+    </section>
+
+    <!-- ──── SECCIÓN: Eventos / Webhooks ──── -->
+    <section class="card events-card" id="section-events">
+      <div class="card-header">
+        <div class="step-badge">3</div>
+        <div>
+          <h2 class="card-title">Eventos del Proceso</h2>
+          <p class="card-subtitle">Mensajes recibidos desde el iframe (postMessage) y notificaciones de webhooks</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="btn-clear-events">Limpiar</button>
+      </div>
+
+      <div class="events-legend">
+        <span class="badge badge--success">succeeded</span>
+        <span class="badge badge--error">failed</span>
+        <span class="badge badge--warning">steps.completed</span>
+        <span class="badge badge--info">webhook</span>
+      </div>
+
+      <ul class="event-list" id="event-list">
+        <li class="event-empty" id="event-empty">
+          <span class="event-empty-icon">📭</span>
+          <p>Aún no hay eventos. Inicia una verificación para ver los mensajes aquí.</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ──── SECCIÓN: Referencia rápida ──── -->
+    <section class="card reference-card">
+      <div class="card-header">
+        <div class="step-badge">💡</div>
+        <div>
+          <h2 class="card-title">Guía Rápida de Integración</h2>
+          <p class="card-subtitle">Pasos para registrar tu aplicación y usar el iframe</p>
+        </div>
+      </div>
+
+      <ol class="steps-list">
+        <li class="step-item">
+          <div class="step-num">1</div>
+          <div>
+            <strong>Crear un Flow</strong> – En el dashboard de Truora, construye tu flujo con los validadores
+            (documento + biometría).
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">2</div>
+          <div>
+            <strong>Registrar tu dominio</strong> – Comunica a tu integration manager la URL pública donde embedes el
+            iframe (p. ej. en Vercel).
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">3</div>
+          <div>
+            <strong>Crear Account ID</strong> – Identifica a tu usuario con un <code>account_id</code> único
+            (<code>[a-zA-Z0-9_.-]+</code>).
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">4</div>
+          <div>
+            <strong>Generar Process Link</strong> – Llama a la API para obtener el token de integración y construye la
+            URL:
+            <code class="code-block">https://identity.truora.com/?token=&lt;api_key&gt;</code>
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">5</div>
+          <div>
+            <strong>Embeder el iframe</strong> – Usa el tag con <code>allow="camera"</code>, mínimo 450 × 700 px.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">6</div>
+          <div>
+            <strong>Escuchar postMessage</strong> – Captura <code>truora.process.succeeded</code>,
+            <code>truora.process.failed</code> o <code>truora.steps.completed</code>.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">7</div>
+          <div>
+            <strong>Configurar Webhooks</strong> – En el dashboard activa webhooks para recibir notificaciones
+            automáticas de resultados.
+          </div>
+        </li>
+      </ol>
+
+      <div class="reference-links">
+        <a href="https://dev.truora.com/digital-identity/iframe_integration/" target="_blank" rel="noopener"
+          class="ref-link">📄 Docs iframe</a>
+        <a href="https://dev.truora.com/digital-identity/create_process_link/" target="_blank" rel="noopener"
+          class="ref-link">🔗 Process Link</a>
+        <a href="https://dev.truora.com/digital-identity/web_webhooks/" target="_blank" rel="noopener"
+          class="ref-link">🔔 Webhooks</a>
+        <a href="https://dev.truora.com/digital-identity/account_set_up/" target="_blank" rel="noopener"
+          class="ref-link">⚙️ Account Setup</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <p>Reto 01 – Integración iframe · <a href="https://dev.truora.com/digital-identity/" target="_blank" rel="noopener"
+        class="link">Truora Developers</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
