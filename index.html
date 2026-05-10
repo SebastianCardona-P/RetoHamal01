@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reto 01 – Verificación de Identidad Digital</title>
+  <title>Reto 01 – Verificación de Identidad Digital · Truora</title>
   <meta name="description"
-    content="Portal de verificación de identidad digital con validación de documento y biometría facial mediante Truora." />
+    content="Portal de verificación de identidad digital con validación de documento y biometría facial mediante Truora iframe." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -20,11 +20,12 @@
     <div class="header-inner">
       <div class="logo">
         <div class="logo-icon">T</div>
-        <span class="logo-text">Reto 01<span class="logo-accent">Identity</span></span>
+        <span class="logo-text">Truora <span class="logo-accent">Identity</span></span>
       </div>
       <nav class="nav-pills">
-        <span class="pill pill--active">Verificación</span>
-        <span class="pill" id="nav-events">Eventos</span>
+        <span class="pill pill--active" id="nav-verification">🪪 Verificación</span>
+        <span class="pill" id="nav-events">📡 Eventos</span>
+        <span class="pill" id="nav-guide">📋 Guía</span>
       </nav>
     </div>
   </header>
@@ -32,52 +33,69 @@
   <!-- ===== MAIN ===== -->
   <main class="main">
 
-    <!-- ──── SECCIÓN: Configuración ──── -->
+    <!-- ──── SECCIÓN 1: Iniciar Verificación ──── -->
     <section class="card config-card" id="section-config">
       <div class="card-header">
         <div class="step-badge">1</div>
         <div>
-          <h2 class="card-title">Configurar Process Link</h2>
-          <p class="card-subtitle">Ingresa el token de integración generado desde la API de Truora</p>
+          <h2 class="card-title">Iniciar Verificación</h2>
+          <p class="card-subtitle">
+            El sistema crea automáticamente el <code>account_id</code> y el token de integración
+            llamando a la API de Truora desde el servidor.
+          </p>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="input-wrapper">
-          <label class="input-label" for="token-input">Web Integration Token (api_key)</label>
-          <div class="input-group">
-            <span class="input-icon">🔑</span>
-            <input type="text" id="token-input" class="token-input"
-              placeholder="Pega aquí tu token  (ej: eyJhbGciOiJSUzI1...)" autocomplete="off" spellcheck="false" />
-            <button class="btn-clear" id="btn-clear-token" title="Limpiar">✕</button>
-          </div>
+      <!-- Estado de la API Key (inyectada como variable de entorno en el servidor) -->
+      <div class="api-status-row">
+        <div class="status-chip" id="api-key-status">
+          <span class="status-dot status-dot--loading"></span>
+          <span class="status-label">Verificando configuración del servidor…</span>
         </div>
-        <button class="btn btn--primary" id="btn-launch">
-          <span class="btn-icon">▶</span>
-          Iniciar Verificación
+      </div>
+
+      <!-- Botón principal -->
+      <div class="launch-row">
+        <button class="btn btn--primary btn--lg" id="btn-start" disabled>
+          <span class="btn-spinner hidden" id="btn-spinner"></span>
+          <span class="btn-icon" id="btn-icon">▶</span>
+          <span id="btn-label">Iniciar Verificación</span>
         </button>
+        <p class="launch-hint">
+          Se creará un <code>account_id</code> único, se generará el <code>api_key</code>
+          y se abrirá el iframe automáticamente.
+        </p>
       </div>
 
-      <div class="info-banner">
-        <span class="info-icon">ℹ️</span>
-        <p>
-          El token se obtiene desde la API de Truora. Recuerda que cada token tiene una
-          vigencia de <strong>2 horas</strong> y es de un solo uso por sesión.
-          <a href="https://dev.truora.com/digital-identity/create_process_link/" target="_blank" rel="noopener"
-            class="link">Ver documentación →</a>
-        </p>
+      <!-- Info del proceso activo -->
+      <div class="process-info hidden" id="process-info">
+        <div class="info-row">
+          <span class="info-key">account_id</span>
+          <code class="info-value" id="info-account-id">—</code>
+          <button class="btn-copy" title="Copiar" data-copy="info-account-id">⧉</button>
+        </div>
+        <div class="info-row">
+          <span class="info-key">token (api_key)</span>
+          <code class="info-value truncate" id="info-token">—</code>
+          <button class="btn-copy" title="Copiar" data-copy="info-token">⧉</button>
+        </div>
+        <div class="info-row">
+          <span class="info-key">process_url</span>
+          <code class="info-value truncate" id="info-url">—</code>
+          <button class="btn-copy" title="Copiar" data-copy="info-url">⧉</button>
+        </div>
       </div>
     </section>
 
-    <!-- ──── SECCIÓN: iframe ──── -->
-    <section class="card iframe-card" id="section-iframe" hidden>
+    <!-- ──── SECCIÓN 2: iframe ──── -->
+    <section class="card iframe-card hidden" id="section-iframe">
       <div class="card-header">
         <div class="step-badge">2</div>
         <div>
           <h2 class="card-title">Flujo de Verificación</h2>
           <p class="card-subtitle" id="iframe-subtitle">Validación de documento e identidad biométrica</p>
         </div>
-        <button class="btn btn--ghost btn--sm" id="btn-back">← Cambiar token</button>
+        <button class="btn btn--ghost btn--sm" id="btn-new-session">↺ Nueva sesión</button>
       </div>
 
       <div class="iframe-wrapper">
@@ -85,27 +103,41 @@
           <div class="spinner"></div>
           <p class="loading-text">Cargando flujo de verificación…</p>
         </div>
-        <iframe id="truora-iframe" src="" allow="camera; microphone" width="100%" height="700" frameborder="0"
-          title="Truora – Verificación de Identidad"></iframe>
+        <iframe id="truora-iframe" src="" allow="camera; microphone" width="100%" height="700"
+          frameborder="0" title="Truora – Verificación de Identidad"></iframe>
       </div>
     </section>
 
-    <!-- ──── SECCIÓN: Eventos / Webhooks ──── -->
+    <!-- ──── SECCIÓN 3: Eventos (postMessage + Webhooks) ──── -->
     <section class="card events-card" id="section-events">
       <div class="card-header">
         <div class="step-badge">3</div>
         <div>
-          <h2 class="card-title">Eventos del Proceso</h2>
-          <p class="card-subtitle">Mensajes recibidos desde el iframe (postMessage) y notificaciones de webhooks</p>
+          <h2 class="card-title">Eventos en Tiempo Real</h2>
+          <p class="card-subtitle">
+            Mensajes <code>postMessage</code> del iframe y notificaciones recibidas por webhook
+            en <code>/api/webhook</code>
+          </p>
         </div>
         <button class="btn btn--ghost btn--sm" id="btn-clear-events">Limpiar</button>
       </div>
 
       <div class="events-legend">
-        <span class="badge badge--success">succeeded</span>
-        <span class="badge badge--error">failed</span>
+        <span class="badge badge--success">process.succeeded</span>
+        <span class="badge badge--error">process.failed</span>
         <span class="badge badge--warning">steps.completed</span>
         <span class="badge badge--info">webhook</span>
+        <span class="badge badge--neutral">api</span>
+      </div>
+
+      <!-- Webhook URL info -->
+      <div class="webhook-info" id="webhook-url-info">
+        <span class="info-icon">🔔</span>
+        <div>
+          <strong>Tu endpoint de webhook:</strong>
+          <code class="webhook-url" id="webhook-endpoint-url">https://tu-app.vercel.app/api/webhook</code>
+          <button class="btn-copy-sm" title="Copiar URL" data-copy-text id="btn-copy-webhook">⧉ Copiar</button>
+        </div>
       </div>
 
       <ul class="event-list" id="event-list">
@@ -116,13 +148,13 @@
       </ul>
     </section>
 
-    <!-- ──── SECCIÓN: Referencia rápida ──── -->
-    <section class="card reference-card">
+    <!-- ──── SECCIÓN 4: Guía de Webhooks ──── -->
+    <section class="card reference-card" id="section-guide">
       <div class="card-header">
         <div class="step-badge">💡</div>
         <div>
-          <h2 class="card-title">Guía Rápida de Integración</h2>
-          <p class="card-subtitle">Pasos para registrar tu aplicación y usar el iframe</p>
+          <h2 class="card-title">Cómo registrar el Webhook en Truora</h2>
+          <p class="card-subtitle">Paso a paso desde el dashboard de Truora</p>
         </div>
       </div>
 
@@ -130,50 +162,71 @@
         <li class="step-item">
           <div class="step-num">1</div>
           <div>
-            <strong>Crear un Flow</strong> – En el dashboard de Truora, construye tu flujo con los validadores
-            (documento + biometría).
+            Ingresa a <a href="https://app.truora.com" target="_blank" rel="noopener" class="link">app.truora.com</a>
+            y haz login con tu cuenta.
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">2</div>
           <div>
-            <strong>Registrar tu dominio</strong> – Comunica a tu integration manager la URL pública donde embedes el
-            iframe (p. ej. en Vercel).
+            En el menú lateral busca <strong>Webhooks / Automations</strong> (o <em>Reglas</em>).
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">3</div>
           <div>
-            <strong>Crear Account ID</strong> – Identifica a tu usuario con un <code>account_id</code> único
-            (<code>[a-zA-Z0-9_.-]+</code>).
+            Haz click en <strong>"Nueva regla"</strong> (New rule).
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">4</div>
           <div>
-            <strong>Generar Process Link</strong> – Llama a la API para obtener el token de integración y construye la
-            URL:
-            <code class="code-block">https://identity.truora.com/?token=&lt;api_key&gt;</code>
+            Ponle un nombre (ej. <em>"Proceso Identidad Completado"</em>).
+            Selecciona producto: <strong>Digital Identity</strong>.
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">5</div>
           <div>
-            <strong>Embeder el iframe</strong> – Usa el tag con <code>allow="camera"</code>, mínimo 450 × 700 px.
+            Selecciona subproducto: <strong>Process</strong>.
+            Selecciona evento: <strong>Completed</strong>
+            (o también <em>Failed</em> para manejar errores).
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">6</div>
           <div>
-            <strong>Escuchar postMessage</strong> – Captura <code>truora.process.succeeded</code>,
-            <code>truora.process.failed</code> o <code>truora.steps.completed</code>.
+            Opcional: agrega condiciones (ej. filtra por <code>flow_id</code> específico).
           </div>
         </li>
         <li class="step-item">
           <div class="step-num">7</div>
           <div>
-            <strong>Configurar Webhooks</strong> – En el dashboard activa webhooks para recibir notificaciones
-            automáticas de resultados.
+            En la sección <strong>Acciones</strong> → elige <strong>Webhook</strong>.
+            Ingresa:
+            <ul class="sub-list">
+              <li>Nombre de la acción</li>
+              <li>Email de notificación</li>
+              <li>
+                <strong>URL del endpoint:</strong>
+                <code class="code-block" id="guide-webhook-url">https://tu-app.vercel.app/api/webhook</code>
+              </li>
+            </ul>
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">8</div>
+          <div>
+            Truora te enviará una <strong>firma JWT</strong> al email. Guárdala como
+            <code>WEBHOOK_SECRET</code> en tus variables de entorno de Vercel para verificar
+            la autenticidad de los webhooks.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">9</div>
+          <div>
+            Haz click en <strong>"Guardar acción"</strong> y luego <strong>"Finalizar configuración de regla"</strong>.
+            ¡Listo! Truora hará POST a tu endpoint cada vez que un proceso de identidad finalice.
           </div>
         </li>
       </ol>
@@ -181,12 +234,14 @@
       <div class="reference-links">
         <a href="https://dev.truora.com/digital-identity/iframe_integration/" target="_blank" rel="noopener"
           class="ref-link">📄 Docs iframe</a>
-        <a href="https://dev.truora.com/digital-identity/create_process_link/" target="_blank" rel="noopener"
-          class="ref-link">🔗 Process Link</a>
-        <a href="https://dev.truora.com/digital-identity/web_webhooks/" target="_blank" rel="noopener"
+        <a href="https://dev.truora.com/guides/web_integration_token/" target="_blank" rel="noopener"
+          class="ref-link">🔗 Web Token</a>
+        <a href="https://dev.truora.com/guides/webhook_rule/" target="_blank" rel="noopener"
           class="ref-link">🔔 Webhooks</a>
-        <a href="https://dev.truora.com/digital-identity/account_set_up/" target="_blank" rel="noopener"
-          class="ref-link">⚙️ Account Setup</a>
+        <a href="https://dev.truora.com/guides/account_id/" target="_blank" rel="noopener"
+          class="ref-link">👤 Account ID</a>
+        <a href="https://app.truora.com" target="_blank" rel="noopener"
+          class="ref-link">🚀 Dashboard Truora</a>
       </div>
     </section>
 
@@ -194,8 +249,12 @@
 
   <!-- ===== FOOTER ===== -->
   <footer class="footer">
-    <p>Reto 01 – Integración iframe · <a href="https://dev.truora.com/digital-identity/" target="_blank" rel="noopener"
-        class="link">Truora Developers</a></p>
+    <p>
+      Reto 01 – Integración iframe con Webhooks ·
+      <a href="https://dev.truora.com/digital-identity/" target="_blank" rel="noopener" class="link">
+        Truora Developers
+      </a>
+    </p>
   </footer>
 
   <script src="app.js"></script>
