@@ -72,25 +72,22 @@ async function checkServerConfig() {
   setStatusChip('loading', 'Verificando configuración del servidor…');
 
   try {
-    // Hacemos un OPTIONS / GET al endpoint. Si el servidor devuelve 405
-    // o 200, significa que está vivo y las env vars están cargadas.
-    const res = await fetch('/api/start-verification', { method: 'GET' });
+    const res = await fetch('/api/health');
+    const data = await res.json();
 
-    if (res.status === 405 || res.status === 200) {
-      // Servidor OK (405 = Method Not Allowed = el endpoint existe)
+    if (res.ok && data.ok) {
       setStatusChip('ok', 'Servidor configurado correctamente ✓');
       btnStart.disabled = false;
-    } else if (res.status === 500) {
-      const data = await res.json().catch(() => ({}));
-      setStatusChip('error', `Error de configuración: ${data.error || 'env vars faltantes'}`);
     } else {
-      setStatusChip('ok', 'Servidor activo ✓');
-      btnStart.disabled = false;
+      const missing = [];
+      if (data.truora_api_key?.includes('MISSING')) missing.push('TRUORA_API_KEY');
+      if (data.truora_flow_id?.includes('MISSING')) missing.push('TRUORA_FLOW_ID');
+      setStatusChip('error',
+        `Variables faltantes en Vercel: ${missing.join(', ')}`);
     }
   } catch (_) {
-    // En desarrollo local sin servidor (solo archivos estáticos), el endpoint no existe
     setStatusChip('error',
-      'Servidor no disponible. Abre con "vercel dev" o despliega en Vercel para llamar la API.');
+      'Servidor no disponible. Usa "vercel dev" en local o verifica el despliegue en Vercel.');
   }
 }
 
