@@ -204,7 +204,7 @@ truoraIframe.addEventListener('load', () => {
    ========================================================= */
 window.addEventListener('message', (event) => {
   // Seguridad: ignorar mensajes de orígenes desconocidos
-  if (event.origin && !event.origin.includes('truora.com') && !event.origin.includes('identity.truora.com')) {
+  if (event.origin && !event.origin.includes('truora.com') && !event.origin.includes('truorastaging.com')) {
     // En desarrollo podría venir del mismo origen; lo dejamos pasar si no tiene origen hostil
     if (event.origin !== window.location.origin) return;
   }
