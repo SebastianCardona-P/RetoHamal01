@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   const TRUORA_API_KEY = process.env.TRUORA_API_KEY;
-  const FLOW_ID        = process.env.TRUORA_FLOW_ID;
+  const FLOW_ID = process.env.TRUORA_FLOW_ID;
 
   if (!TRUORA_API_KEY || !FLOW_ID) {
     return res.status(500).json({
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // ────────────────────────────────────────────────────
   let accountId;
   try {
-    const accountRes = await fetch('https://api.validations.truorastaging.com/v1/accounts', {
+    const accountRes = await fetch('https://api.validations.truora.com/v1/accounts', {
       method: 'POST',
       headers: {
         'Truora-API-Key': TRUORA_API_KEY,
@@ -76,16 +76,16 @@ export default async function handler(req, res) {
       : process.env.APP_URL || 'https://localhost:3000';
 
     const params = new URLSearchParams({
-      key_type:        'web',
-      grant:           'digital-identity',
+      key_type: 'web',
+      grant: 'digital-identity',
       api_key_version: '1',
-      country:         'ALL',
-      flow_id:         FLOW_ID,
-      account_id:      accountId,
-      redirect_url:    `${redirectBase}/`,
+      country: 'ALL',
+      flow_id: FLOW_ID,
+      account_id: accountId,
+      redirect_url: `${redirectBase}/`,
     });
 
-    const tokenRes = await fetch('https://api.account.truorastaging.com/v1/api-keys', {
+    const tokenRes = await fetch('https://api.account.truora.com/v1/api-keys', {
       method: 'POST',
       headers: {
         'Truora-API-Key': TRUORA_API_KEY,
@@ -123,11 +123,11 @@ export default async function handler(req, res) {
   // ────────────────────────────────────────────────────
   // Respuesta exitosa
   // ────────────────────────────────────────────────────
-  const processUrl = `https://identity.truorastaging.com/?token=${webToken}`;
+  const processUrl = `https://identity.truora.com/?token=${webToken}`;
 
   return res.status(200).json({
-    account_id:  accountId,
-    token:       webToken,
+    account_id: accountId,
+    token: webToken,
     process_url: processUrl,
   });
 }
