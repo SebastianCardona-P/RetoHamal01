@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // ────────────────────────────────────────────────────
   let accountId;
   try {
-    const accountRes = await fetch('https://api.validations.truora.com/v1/accounts', {
+    const accountRes = await fetch('https://api.validations.truorastaging.com/v1/accounts', {
       method: 'POST',
       headers: {
         'Truora-API-Key': TRUORA_API_KEY,
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       redirect_url: `${redirectBase}/`,
     });
 
-    const tokenRes = await fetch('https://api.account.truora.com/v1/api-keys', {
+    const tokenRes = await fetch('https://api.account.truorastaging.com/v1/api-keys', {
       method: 'POST',
       headers: {
         'Truora-API-Key': TRUORA_API_KEY,
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
   // ────────────────────────────────────────────────────
   // Respuesta exitosa
   // ────────────────────────────────────────────────────
-  const processUrl = `https://identity.truora.com/?token=${webToken}`;
+  const processUrl = `https://identity.truorastaging.com/?token=${webToken}`;
 
   return res.status(200).json({
     account_id: accountId,
