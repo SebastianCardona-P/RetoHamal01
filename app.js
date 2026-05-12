@@ -285,7 +285,7 @@ function startWebhookPolling() {
   lastWebhookPollTime = new Date().toISOString();
 
   logEvent('info', 'webhook.polling.started', {
-    endpoint: '/api/webhook-events',
+    endpoint: '/api/webhook (GET)',
     interval_ms: 3000,
     note: 'Escuchando webhooks de Truora en tiempo real…',
   });
@@ -293,8 +293,8 @@ function startWebhookPolling() {
   webhookPollInterval = setInterval(async () => {
     try {
       const url = lastWebhookPollTime
-        ? `/api/webhook-events?since=${encodeURIComponent(lastWebhookPollTime)}`
-        : '/api/webhook-events';
+        ? `/api/webhook?since=${encodeURIComponent(lastWebhookPollTime)}`
+        : '/api/webhook';
 
       const res = await fetch(url);
       if (!res.ok) return;
@@ -503,7 +503,7 @@ window.addEventListener('DOMContentLoaded', () => {
     version: '2.1.0',
     docs: 'https://dev.truora.com/digital-identity/iframe_integration/',
     webhook_endpoint: `${getSiteBaseUrl()}/api/webhook`,
-    webhook_polling: `${getSiteBaseUrl()}/api/webhook-events`,
+    webhook_polling: `${getSiteBaseUrl()}/api/webhook (GET)  ← polling del frontend`,
     tip: 'El polling de webhooks se inicia automáticamente al comenzar una verificación.',
   });
 
