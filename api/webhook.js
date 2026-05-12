@@ -5,16 +5,22 @@
  * Truora envía un POST con un JWT firmado cuando ocurre un evento
  * (proceso completado, validación fallida, etc.).
  *
- * En producción deberías:
- *  1. Verificar la firma del JWT con el secret que te da Truora
- *  2. Guardar el evento en tu base de datos
- *  3. Notificar a tu sistema de negocio
- *
- * Para este reto, loguea el payload y responde 200 OK.
+ * Almacena los últimos 20 eventos en memoria para que el frontend
+ * los pueda consultar vía GET /api/webhook-events (polling).
  *
  * Variables de entorno recomendadas:
  *   WEBHOOK_SECRET  →  Secret para verificar la firma JWT de Truora (opcional)
  */
+
+// Almacén en memoria compartido entre invocaciones del mismo worker.
+// En Vercel serverless cada instancia tiene su propio espacio, pero
+// para el propósito de este reto (una sola instancia activa) funciona correctamente.
+if (!global._truoraWebhookEvents) {
+  global._truoraWebhookEvents = [];
+}
+
+export const webhookEvents = global._truoraWebhookEvents;
+const MAX_EVENTS = 20;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -29,6 +35,22 @@ export default async function handler(req, res) {
   console.log('Headers:', JSON.stringify(req.headers, null, 2));
   console.log('Body:', JSON.stringify(body, null, 2));
   console.log('================================');
+
+  // Guardar en el store en memoria para polling del frontend
+  const event = {
+    id: `wh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    receivedAt,
+    headers: {
+      'content-type': req.headers['content-type'],
+      'x-truora-signature': req.headers['x-truora-signature'] || null,
+    },
+    body,
+  };
+
+  webhookEvents.unshift(event);
+  if (webhookEvents.length > MAX_EVENTS) {
+    webhookEvents.splice(MAX_EVENTS);
+  }
 
   // Truora espera una respuesta 200 rápida.
   // Si tardas en responder, Truora reintentará el envío.
