@@ -47,6 +47,10 @@ const guideWebhookUrl    = document.getElementById('guide-webhook-url');
 let events = [];
 let currentAccountId = null;
 
+// ── Webhook Polling ─────────────────────────────────────
+let webhookPollInterval = null;
+let lastWebhookPollTime = null; // solo traer eventos más nuevos que este timestamp
+
 /* =========================================================
    1. INICIALIZACIÓN: detectar la URL base del sitio
    ========================================================= */
@@ -161,6 +165,9 @@ async function startVerification() {
 
   // Cargar iframe
   loadIframe(data.process_url, data.account_id);
+
+  // Iniciar polling de webhooks una vez que hay sesión activa
+  startWebhookPolling();
 }
 
 function setLoadingState(loading) {
@@ -270,7 +277,69 @@ function escapeHtml(str) {
 }
 
 /* =========================================================
-   7. WEBHOOK SIMULATION (para demos sin Vercel desplegado)
+   7. WEBHOOK POLLING — consulta /api/webhook-events cada 3 s
+   y muestra en el panel los webhooks reales que llegan de Truora.
+   ========================================================= */
+function startWebhookPolling() {
+  if (webhookPollInterval) return; // ya está corriendo
+  lastWebhookPollTime = new Date().toISOString();
+
+  logEvent('info', 'webhook.polling.started', {
+    endpoint: '/api/webhook-events',
+    interval_ms: 3000,
+    note: 'Escuchando webhooks de Truora en tiempo real…',
+  });
+
+  webhookPollInterval = setInterval(async () => {
+    try {
+      const url = lastWebhookPollTime
+        ? `/api/webhook-events?since=${encodeURIComponent(lastWebhookPollTime)}`
+        : '/api/webhook-events';
+
+      const res = await fetch(url);
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      if (data.events && data.events.length > 0) {
+        // Actualizar el cursor de tiempo para el siguiente poll
+        lastWebhookPollTime = data.polledAt;
+
+        data.events.forEach(evt => {
+          const body = evt.body || {};
+          const status = body.status || body.event || 'webhook';
+          const eventType = status === 'success' || status === 'succeeded' ? 'success'
+            : status === 'failure' || status === 'failed' ? 'error'
+            : 'info';
+
+          logEvent(eventType, `webhook.received · ${body.event || status}`, {
+            ...evt.body,
+            _receivedAt: evt.receivedAt,
+            _webhookId: evt.id,
+          });
+
+          showToast(
+            `🔔 Webhook: ${body.event || status} (${body.account_id || '—'})`,
+            eventType === 'success' ? 'success' : eventType === 'error' ? 'error' : 'info'
+          );
+        });
+      }
+    } catch (_) {
+      // silencioso — no interrumpir si hay un error de red temporal
+    }
+  }, 3000);
+}
+
+function stopWebhookPolling() {
+  if (webhookPollInterval) {
+    clearInterval(webhookPollInterval);
+    webhookPollInterval = null;
+    lastWebhookPollTime = null;
+  }
+}
+
+/* =========================================================
+   7b. WEBHOOK SIMULATION (para demos sin Vercel desplegado)
    Expuesto globalmente: truoraSimulateWebhook({ status: 'success' })
    ========================================================= */
 function simulateWebhook(payload = {}) {
@@ -340,6 +409,7 @@ btnStart.addEventListener('click', startVerification);
 
 if (btnNewSession) {
   btnNewSession.addEventListener('click', () => {
+    stopWebhookPolling();
     sectionIframe.classList.add('hidden');
     truoraIframe.src = '';
     processInfo.classList.add('hidden');
@@ -426,12 +496,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // Exponer helpers globales para la consola
   window.truoraSimulateWebhook = simulateWebhook;
   window.truoraLogEvent = logEvent;
+  window.truoraStartPolling = startWebhookPolling;
+  window.truoraStopPolling = stopWebhookPolling;
 
   logEvent('neutral', 'app.ready', {
-    version: '2.0.0',
+    version: '2.1.0',
     docs: 'https://dev.truora.com/digital-identity/iframe_integration/',
     webhook_endpoint: `${getSiteBaseUrl()}/api/webhook`,
-    tip: 'Ejecuta truoraSimulateWebhook({ status: "success" }) en la consola para simular un webhook',
+    webhook_polling: `${getSiteBaseUrl()}/api/webhook-events`,
+    tip: 'El polling de webhooks se inicia automáticamente al comenzar una verificación.',
   });
 
   console.info(
