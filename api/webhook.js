@@ -5,22 +5,31 @@
  * Truora envía un POST con un JWT firmado cuando ocurre un evento
  * (proceso completado, validación fallida, etc.).
  *
- * Almacena los últimos 20 eventos en memoria para que el frontend
- * los pueda consultar vía GET /api/webhook-events (polling).
- *
- * Variables de entorno recomendadas:
- *   WEBHOOK_SECRET  →  Secret para verificar la firma JWT de Truora (opcional)
+ * Los eventos se persisten en /tmp/truora-webhook-events.json para
+ * que webhook-events.js pueda leerlos en la misma instancia Lambda.
  */
 
-// Almacén en memoria compartido entre invocaciones del mismo worker.
-// En Vercel serverless cada instancia tiene su propio espacio, pero
-// para el propósito de este reto (una sola instancia activa) funciona correctamente.
-if (!global._truoraWebhookEvents) {
-  global._truoraWebhookEvents = [];
+import fs from 'fs';
+
+const EVENTS_FILE = '/tmp/truora-webhook-events.json';
+const MAX_EVENTS = 50;
+
+function readEvents() {
+  try {
+    if (fs.existsSync(EVENTS_FILE)) {
+      return JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf8'));
+    }
+  } catch (_) {}
+  return [];
 }
 
-export const webhookEvents = global._truoraWebhookEvents;
-const MAX_EVENTS = 20;
+function writeEvents(events) {
+  try {
+    fs.writeFileSync(EVENTS_FILE, JSON.stringify(events), 'utf8');
+  } catch (err) {
+    console.error('[webhook] Error writing events file:', err.message);
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -36,24 +45,24 @@ export default async function handler(req, res) {
   console.log('Body:', JSON.stringify(body, null, 2));
   console.log('================================');
 
-  // Guardar en el store en memoria para polling del frontend
+  // Construir el evento
   const event = {
     id: `wh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     receivedAt,
     headers: {
-      'content-type': req.headers['content-type'],
+      'content-type': req.headers['content-type'] || null,
       'x-truora-signature': req.headers['x-truora-signature'] || null,
     },
     body,
   };
 
-  webhookEvents.unshift(event);
-  if (webhookEvents.length > MAX_EVENTS) {
-    webhookEvents.splice(MAX_EVENTS);
-  }
+  // Leer → prepend → recortar → escribir
+  const events = readEvents();
+  events.unshift(event);
+  if (events.length > MAX_EVENTS) events.splice(MAX_EVENTS);
+  writeEvents(events);
 
   // Truora espera una respuesta 200 rápida.
-  // Si tardas en responder, Truora reintentará el envío.
   return res.status(200).json({
     received: true,
     timestamp: receivedAt,
