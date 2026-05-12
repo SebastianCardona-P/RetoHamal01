@@ -1,17 +1,24 @@
 /**
  * GET /api/webhook-events
  *
- * Devuelve los últimos webhooks recibidos por /api/webhook.
- * El frontend hace polling a este endpoint cada 3 segundos para
- * mostrar los eventos en tiempo real en el panel de la UI.
+ * Lee los últimos webhooks recibidos desde /tmp/truora-webhook-events.json
+ * (escrito por /api/webhook) y los devuelve al frontend para polling cada 3s.
  *
  * Query params:
  *   since  →  ISO timestamp; si se provee, solo devuelve eventos más nuevos
  */
 
-// Referencia al mismo store en memoria que usa webhook.js
-if (!global._truoraWebhookEvents) {
-  global._truoraWebhookEvents = [];
+import fs from 'fs';
+
+const EVENTS_FILE = '/tmp/truora-webhook-events.json';
+
+function readEvents() {
+  try {
+    if (fs.existsSync(EVENTS_FILE)) {
+      return JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf8'));
+    }
+  } catch (_) {}
+  return [];
 }
 
 export default function handler(req, res) {
@@ -21,7 +28,7 @@ export default function handler(req, res) {
 
   const { since } = req.query;
 
-  let events = global._truoraWebhookEvents;
+  let events = readEvents();
 
   if (since) {
     const sinceDate = new Date(since);
